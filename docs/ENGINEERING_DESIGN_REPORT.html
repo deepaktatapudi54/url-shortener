@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>URL Shortener Engineering Design Report</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --paper: #ffffff;
+        --panel: #eef3ff;
+        --panel-strong: #eaf6ff;
+        --ink: #1f2937;
+        --muted: #4b5563;
+        --line: #dfe7f1;
+        --primary: #1f4d9b;
+        --primary-soft: #dfe9ff;
+        --accent: #3bb7a8;
+        --warning: #e9a23b;
+        --danger: #c85757;
+        --shadow: 0 10px 30px rgba(31, 77, 155, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(180deg, #eef3fb 0%, #f7f9fc 100%);
+        color: var(--ink);
+        line-height: 1.6;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 32px auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .cover {
+        background: linear-gradient(135deg, #0f172a 0%, #173b72 45%, #1f4d9b 100%);
+        color: white;
+        padding: 72px 56px 48px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .cover::after {
+        content: "";
+        position: absolute;
+        right: -80px;
+        bottom: -80px;
+        width: 260px;
+        height: 260px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        opacity: 0.9;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 42px;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+      }
+
+      .subtitle {
+        font-size: 22px;
+        opacity: 0.9;
+        margin-bottom: 28px;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(170px, 1fr));
+        gap: 16px;
+        margin-top: 30px;
+      }
+
+      .meta-card {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 16px 18px;
+      }
+
+      .meta-label {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.75;
+        margin-bottom: 8px;
+      }
+
+      .meta-value {
+        font-weight: 600;
+      }
+
+      .content {
+        padding: 40px 54px 70px;
+      }
+
+      .toc {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 20px 22px;
+        margin: 0 0 32px;
+      }
+
+      .toc h2 {
+        margin-top: 0;
+        margin-bottom: 14px;
+        font-size: 20px;
+      }
+
+      .toc-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px 20px;
+        padding-left: 18px;
+        margin: 0;
+      }
+
+      .toc a {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .toc a:hover { text-decoration: underline; }
+
+      section {
+        margin-bottom: 20px;
+        padding-top: 10px;
+      }
+
+      section + section { border-top: 1px solid var(--line); }
+
+      h2 {
+        margin: 0 0 18px;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+        color: var(--primary);
+      }
+
+      h3 {
+        margin: 24px 0 12px;
+        font-size: 20px;
+        color: #193a6e;
+      }
+
+      p, li {
+        font-size: 15px;
+        color: var(--ink);
+      }
+
+      .lead {
+        font-size: 18px;
+        color: var(--muted);
+      }
+
+      ul, ol {
+        padding-left: 20px;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 18px;
+      }
+
+      .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .gallery-card {
+        background: #fafcff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      .gallery-card img {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        display: block;
+        background: white;
+      }
+
+      .gallery-card figcaption {
+        color: var(--muted);
+        font-size: 13px;
+        padding-top: 10px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px 18px 16px;
+      }
+
+      .card h4 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        color: var(--primary);
+      }
+
+      .diagram {
+        background: linear-gradient(180deg, #f8fbff 0%, #eef3ff 100%);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 22px 18px 16px;
+        margin: 20px 0;
+      }
+
+      .diagram-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .node {
+        min-width: 150px;
+        background: white;
+        border: 1px solid #d7e4ff;
+        border-radius: 12px;
+        box-shadow: 0 6px 14px rgba(31, 77, 155, 0.06);
+        padding: 12px 14px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--primary);
+      }
+
+      .node.small { min-width: 120px; }
+      .node.accent { background: #edfef8; border-color: #bfeadf; color: #0a6b5a; }
+      .node.warn { background: #fff7ea; border-color: #f4d5a1; color: #8b5e10; }
+
+      .arrow {
+        font-size: 28px;
+        color: var(--primary);
+        line-height: 1;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 18px 0 24px;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      th, td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        text-align: left;
+      }
+
+      th {
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      tbody tr:last-child td { border-bottom: 0; }
+
+      code, pre {
+        font-family: Consolas, "Courier New", monospace;
+      }
+
+      pre {
+        margin: 16px 0 20px;
+        background: #0b1220;
+        color: #e6eefb;
+        padding: 18px 20px;
+        border-radius: 12px;
+        overflow-x: auto;
+        border: 1px solid #1a2a42;
+      }
+
+      .status-ok { color: #19714d; font-weight: 700; }
+      .status-warn { color: #8a5b00; font-weight: 700; }
+      .status-risk { color: #9f3e3e; font-weight: 700; }
+
+      .note {
+        border-left: 4px solid var(--accent);
+        background: #edfdf9;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 16px 0;
+        color: #0d4f46;
+      }
+
+      .callout {
+        border-left: 4px solid var(--primary);
+        background: var(--panel);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 16px 0;
+      }
+
+      .badge-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 6px 10px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .footer {
+        padding: 20px 54px 38px;
+        color: var(--muted);
+        font-size: 12px;
+        border-top: 1px solid var(--line);
+      }
+
+      @media (max-width: 760px) {
+        .cover, .content, .footer { padding-left: 22px; padding-right: 22px; }
+        .meta-grid { grid-template-columns: 1fr; }
+        h1 { font-size: 32px; }
+        .subtitle { font-size: 18px; }
+      }
+
+      @media print {
+        @page {
+          size: A4;
+          margin: 10mm 12mm;
+        }
+
+        html, body {
+          background: white;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        body {
+          font-size: 12pt;
+        }
+
+        .page {
+          box-shadow: none;
+          border: none;
+          margin: 0;
+          max-width: none;
+        }
+
+        .cover {
+          padding: 28px 24px 18px;
+          break-inside: avoid;
+        }
+
+        .content {
+          padding: 18px 26px 26px;
+        }
+
+        .toc {
+          margin: 0 0 18px;
+          padding: 12px 16px;
+        }
+
+        .toc-list {
+          grid-template-columns: repeat(2, minmax(180px, 1fr));
+          gap: 6px 14px;
+        }
+
+        section {
+          margin-bottom: 10px;
+          padding-top: 6px;
+          break-inside: avoid;
+        }
+
+        section + section {
+          border-top: none;
+        }
+
+        h1 {
+          font-size: 26pt;
+        }
+
+        .subtitle {
+          font-size: 14pt;
+          margin-bottom: 16px;
+        }
+
+        .meta-grid {
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        .meta-card {
+          padding: 10px 12px;
+        }
+
+        h2 {
+          font-size: 20pt;
+          margin: 0 0 10px;
+        }
+
+        h3 {
+          font-size: 14pt;
+          margin: 14px 0 8px;
+        }
+
+        p, li {
+          font-size: 11.5pt;
+          line-height: 1.45;
+        }
+
+        .lead {
+          font-size: 12.5pt;
+        }
+
+        .card-grid {
+          gap: 12px;
+        }
+
+        .card {
+          padding: 12px 12px 10px;
+        }
+
+        .diagram {
+          margin: 10px 0;
+          padding: 12px 12px 8px;
+        }
+
+        .node {
+          min-width: 110px;
+          padding: 8px 10px;
+          font-size: 11pt;
+        }
+
+        .node.small { min-width: 90px; }
+
+        th, td {
+          padding: 8px 9px;
+          font-size: 10.5pt;
+        }
+
+        th {
+          letter-spacing: 0.04em;
+        }
+
+        pre {
+          margin: 10px 0 14px;
+          padding: 12px 14px;
+          font-size: 9.5pt;
+        }
+
+        .note, .callout {
+          padding: 10px 12px;
+          margin: 10px 0;
+        }
+
+        .footer {
+          padding: 10px 26px 18px;
+          font-size: 10pt;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="cover">
+        <div class="eyebrow">Engineering Design Report</div>
+        <h1>URL Shortener</h1>
+        <div class="subtitle">Python, FastAPI, SQLite, and Render deployment</div>
+
+        <div class="meta-grid">
+          <div class="meta-card">
+            <span class="meta-label">Project</span>
+            <span class="meta-value">URL Shortener Service</span>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Assignment</span>
+            <span class="meta-value">AI-Assisted Software Engineering</span>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Author</span>
+            <span class="meta-value">Deepak Tatapudi</span>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Created On</span>
+            <span class="meta-value">29/10/2026</span>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Technology Stack</span>
+            <span class="meta-value">Python, FastAPI, SQLite, HTML, CSS, JavaScript</span>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Deployment</span>
+            <span class="meta-value">GitHub and Render</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <nav class="toc" aria-label="Table of contents">
+          <h2>Table of Contents</h2>
+          <ul class="toc-list">
+            <li><a href="#executive-summary">1. Executive Summary</a></li>
+            <li><a href="#requirements">2. Requirements and Solution Overview</a></li>
+            <li><a href="#architecture">3. System Architecture</a></li>
+            <li><a href="#technology-stack">4. Technology Stack</a></li>
+            <li><a href="#workflow">5. Detailed Application Workflow</a></li>
+            <li><a href="#api-design">6. API Design</a></li>
+            <li><a href="#database-design">7. Database Design</a></li>
+            <li><a href="#ai-process">8. AI-Assisted Development Process</a></li>
+            <li><a href="#decisions">9. Engineering Decisions and Trade-offs</a></li>
+            <li><a href="#testing">10. Testing and Quality Assurance</a></li>
+            <li><a href="#security">11. Security and Risk Assessment</a></li>
+            <li><a href="#deployment">12. GitHub and Render Deployment</a></li>
+            <li><a href="#setup">13. Installation and Setup</a></li>
+            <li><a href="#scenarios">14. Example Engineering Scenarios</a></li>
+            <li><a href="#limitations">15. Limitations and Future Improvements</a></li>
+            <li><a href="#conclusion">16. Conclusion</a></li>
+          </ul>
+        </nav>
+
+        <section id="executive-summary">
+          <h2>1. Executive Summary</h2>
+          <p class="lead">The URL Shortener is a lightweight web application designed to convert long destination URLs into short, human-friendly codes and redirect users accurately to their original destinations. The application combines a browser-based frontend, a Python FastAPI backend, and an SQLite database to provide link creation, redirect handling, and analytics tracking.</p>
+          <p>The implemented feature set includes URL validation, custom alias support, redirect resolution, click counting, link deactivation, analytics retrieval, and admin-protected management endpoints. The repository and test suite confirm that the project is operational as a local application and that the live deployment is reachable on Render.</p>
+          <div class="card-grid">
+            <div class="card">
+              <h4>Primary capabilities</h4>
+              <ul>
+                <li>Create short links</li>
+                <li>Use custom aliases</li>
+                <li>Resolve short URLs</li>
+                <li>Track click counts</li>
+                <li>Deactive links without deleting records</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h4>Operational model</h4>
+              <ul>
+                <li>FastAPI application</li>
+                <li>SQLite persistence</li>
+                <li>Browser UI and REST API</li>
+                <li>GitHub source control</li>
+                <li>Render hosting</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h4>Deployment status</h4>
+              <ul>
+                <li>Repository exists on GitHub</li>
+                <li>Live web app is available</li>
+                <li>API docs are exposed</li>
+                <li>Prototype persistence is SQLite-based</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="gallery-grid" aria-label="Application screenshots">
+            <figure class="gallery-card">
+              <img src="screenshots/home-page.png" alt="Home page of the URL Shortener application" />
+              <figcaption>Figure 1. Application home page</figcaption>
+            </figure>
+            <figure class="gallery-card">
+              <img src="screenshots/short-link-created.png" alt="Successful short URL creation" />
+              <figcaption>Figure 2. Successful short URL creation</figcaption>
+            </figure>
+            <figure class="gallery-card">
+              <img src="screenshots/redirection-success.png" alt="Successful redirect result" />
+              <figcaption>Figure 3. Redirect verification</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="requirements">
+          <h2>2. Requirements and Solution Overview</h2>
+          <p>The original functional requirement was to provide a simple and reliable way to shorten a destination URL, preserve a usable short alias, and redirect a visitor to the original location. In practice, the project also needed validation, usability, analytics, and administrative controls to make the service operational and testable.</p>
+          <p>The current solution addresses those needs with a FastAPI application that accepts an input URL, normalizes it, validates the scheme and hostname, stores the record in SQLite, and returns a generated short URL. When a short code is requested, the backend checks the active record, returns an HTTP redirect, and increments the click count.</p>
+          <p>Additional capability for management and analytics is present in the admin endpoints and in the click tracking logic. The design remains intentionally lightweight and suitable for a prototype or learning deployment while preserving a clean separation between frontend, backend, and data layer.</p>
+        </section>
+
+        <section id="architecture">
+          <h2>3. System Architecture</h2>
+          <div class="diagram">
+            <div class="diagram-row">
+              <div class="node">Browser</div>
+              <div class="arrow">→</div>
+              <div class="node">Frontend UI</div>
+              <div class="arrow">→</div>
+              <div class="node">FastAPI API</div>
+              <div class="arrow">→</div>
+              <div class="node accent">SQLite DB</div>
+            </div>
+            <div class="diagram-row" style="margin-top: 18px;">
+              <div class="node small">Create URL</div>
+              <div class="arrow">→</div>
+              <div class="node small accent">Validate + Store</div>
+              <div class="arrow">→</div>
+              <div class="node small">Return short URL</div>
+            </div>
+            <div class="diagram-row" style="margin-top: 18px;">
+              <div class="node warn">Visitor opens short link</div>
+              <div class="arrow">→</div>
+              <div class="node warn">Resolve code</div>
+              <div class="arrow">→</div>
+              <div class="node warn">Redirect</div>
+            </div>
+          </div>
+
+          <h3>Component interaction</h3>
+          <ul>
+            <li>The browser UI sends requests to the FastAPI application for URL creation and management.</li>
+            <li>The backend validates the URL, alias, and admin credentials before mutating data.</li>
+            <li>SQLite stores the canonical link record, click metadata, and access events.</li>
+            <li>Redirect requests resolve the code and return an HTTP redirect response to the original URL.</li>
+            <li>Admin endpoints return link summaries and analytics while enforcing authentication.</li>
+          </ul>
+
+          <div class="callout">
+            The actual implementation includes a browser frontend, a FastAPI backend, REST endpoints, SQLite persistence, analytics tracking, and admin-protected management routes. This matches the repository code and is consistent with the tested behavior.
+          </div>
+        </section>
+
+        <section id="technology-stack">
+          <h2>4. Technology Stack</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Technology</th>
+                <th>Role</th>
+                <th>Reason for use</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Python</td>
+                <td>Application runtime and business logic</td>
+                <td>Suitable for the FastAPI service and URL processing logic</td>
+              </tr>
+              <tr>
+                <td>FastAPI</td>
+                <td>Web API and request handling</td>
+                <td>Enables high-quality API development with request validation and routing</td>
+              </tr>
+              <tr>
+                <td>SQLite</td>
+                <td>Persistent storage for links and analytics</td>
+                <td>Lightweight and simple for a local or prototype deployment</td>
+              </tr>
+              <tr>
+                <td>HTML, CSS, JavaScript</td>
+                <td>Frontend UI</td>
+                <td>Allows browser-based interaction without additional framework complexity</td>
+              </tr>
+              <tr>
+                <td>Jinja2</td>
+                <td>Template rendering</td>
+                <td>Used for the frontend page served by FastAPI</td>
+              </tr>
+              <tr>
+                <td>Pytest</td>
+                <td>Automated validation</td>
+                <td>Used to verify behavior across link creation, redirects, and admin flows</td>
+              </tr>
+              <tr>
+                <td>GitHub</td>
+                <td>Source control and code hosting</td>
+                <td>Used to manage the codebase and connect to Render</td>
+              </tr>
+              <tr>
+                <td>Render</td>
+                <td>Hosted deployment</td>
+                <td>Provides the live web service and build/start workflow</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="workflow">
+          <h2>5. Detailed Application Workflow</h2>
+          <ol>
+            <li>The user enters a destination URL in the browser frontend.</li>
+            <li>The backend validates the request and ensures that the URL is an allowed HTTP or HTTPS destination.</li>
+            <li>A short code is generated, or a custom alias is accepted if supplied and valid.</li>
+            <li>The record is inserted into SQLite with metadata such as the original URL, created timestamp, updated timestamp, click count, and active status.</li>
+            <li>The API returns a short URL that includes the generated code.</li>
+            <li>A visitor opens the short URL, which is processed by the redirect endpoint.</li>
+            <li>The backend resolves the short code and verifies that the link is active.</li>
+            <li>The response is an HTTP redirect to the original destination URL.</li>
+            <li>The click counter and access event are updated to record analytics.</li>
+            <li>Admin users can list, inspect, update, or disable records through authenticated endpoints.</li>
+          </ol>
+
+          <div class="note">This workflow follows the actual code paths implemented in the repository and is consistent with the tested FastAPI endpoints and SQLite schema.</div>
+        </section>
+
+        <section id="api-design">
+          <h2>6. API Design</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Route</th>
+                <th>Purpose</th>
+                <th>Key behavior</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>GET</td>
+                <td>/</td>
+                <td>Frontend page</td>
+                <td>Serves the application UI from the Jinja template</td>
+              </tr>
+              <tr>
+                <td>POST</td>
+                <td>/api/v1/links</td>
+                <td>Create short link</td>
+                <td>Validates URL and alias; returns created short URL and metadata</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/v1/links</td>
+                <td>Admin listing</td>
+                <td>Requires X-Admin-Key; returns link list and totals</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/v1/links/{short_code}</td>
+                <td>Admin detail</td>
+                <td>Returns full metadata for a short code</td>
+              </tr>
+              <tr>
+                <td>PATCH</td>
+                <td>/api/v1/links/{short_code}</td>
+                <td>Update destination</td>
+                <td>Changes the original URL while keeping the code unchanged</td>
+              </tr>
+              <tr>
+                <td>DELETE</td>
+                <td>/api/v1/links/{short_code}</td>
+                <td>Disable link</td>
+                <td>Disables redirects while retaining the record</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/{short_code}</td>
+                <td>Redirect resolver</td>
+                <td>Returns HTTP 307 redirect for active links</td>
+              </tr>
+              <tr>
+                <td>GET</td>
+                <td>/api/v1/links/{short_code}/analytics</td>
+                <td>Analytics</td>
+                <td>Returns metadata and click count for the link</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Validation and status behavior</h3>
+          <ul>
+            <li>URLs must use HTTP or HTTPS schemes and include a valid hostname.</li>
+            <li>Custom aliases are limited to letters, numbers, hyphen, and underscore.</li>
+            <li>Duplicate custom aliases are rejected with a conflict response.</li>
+            <li>Admin routes require a matching X-Admin-Key header and configured ADMIN_API_KEY.</li>
+            <li>Requests with invalid URLs are rejected by validation with HTTP 422.</li>
+          </ul>
+
+          <pre><code>POST /api/v1/links
+Content-Type: application/json
+
+{
+  "original_url": "https://example.com/very/long/path?query=1",
+  "custom_alias": "demo-link"
+}
+
+Response: 201 Created</code></pre>
+        </section>
+
+        <section id="database-design">
+          <h2>7. Database Design</h2>
+          <p>The application uses SQLite and creates the following primary tables:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Purpose</th>
+                <th>Key schema details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>links</td>
+                <td>Stores each shortened link</td>
+                <td>id, short_code (UNIQUE), original_url, created_at, updated_at, click_count, is_active</td>
+              </tr>
+              <tr>
+                <td>link_events</td>
+                <td>Stores access events</td>
+                <td>id, short_code, accessed_at</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p>The design supports:</p>
+          <ul>
+            <li>one short code per link record</li>
+            <li>link retention after deactivation</li>
+            <li>click tracking through click_count and event insertion</li>
+            <li>admin reporting without deleting archived records</li>
+          </ul>
+
+          <div class="note">The SQLite database path is currently stored under the project data directory and is not intended to be treated as a durable multi-instance production database on Render’s free tier.</div>
+        </section>
+
+        <section id="ai-process">
+          <h2>8. AI-Assisted Development Process</h2>
+          <p>GitHub Copilot was used as a development assistant within VS Code to support implementation, debugging, validation, and documentation tasks. The project repository and active codebase provide the evidence base for the accepted implementation. The engineering workflow was not autonomous; every AI-assisted output was reviewed, validated, and accepted by the engineer before it was treated as final.</p>
+
+          <h3>Engineer-led task decomposition</h3>
+          <p>The requirement was decomposed into concrete engineering tasks that reflected the actual implementation in the repository:</p>
+          <ul>
+            <li>define the core user flow for creating, storing, and resolving a short URL</li>
+            <li>design the route and schema structure for API behavior</li>
+            <li>implement persistence in SQLite with link and analytics metadata</li>
+            <li>add validation for URLs, aliases, and admin-authenticated actions</li>
+            <li>create automated tests to validate functionality and edge cases</li>
+            <li>document setup, deployment, and operational limitations</li>
+          </ul>
+          <p>This sequencing reflects a disciplined engineering approach: AI functions as an accelerator within each task, while the engineer determines scope, quality criteria, and final acceptance.</p>
+
+          <h3>Human ownership and review discipline</h3>
+          <p>The assignment emphasizes that AI should assist execution, not replace engineering judgment. In this project, that principle was applied directly:</p>
+          <ul>
+            <li>AI-assisted code was reviewed against the repository structure and architecture</li>
+            <li>API and database behavior were checked against the implemented endpoints and SQLite schema</li>
+            <li>tests were executed to confirm behavior instead of relying on generated output alone</li>
+            <li>documentation and deployment notes were aligned with the actual repository and live configuration</li>
+          </ul>
+          <p>The final engineering ownership remained with the developer: AI accelerated the process, but the human engineer was accountable for correctness, validation, and final output quality.</p>
+
+          <div class="callout">The design principle for this assignment is explicit: AI assists the engineer within tasks; the engineer owns the execution, quality review, and final acceptance of the outcome.</div>
+        </section>
+
+        <section id="decisions">
+          <h2>9. Engineering Decisions and Trade-offs</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Decision</th>
+                <th>Benefit</th>
+                <th>Limitation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Use SQLite for persistence</td>
+                <td>Simple, low-overhead, easy to run locally</td>
+                <td>Not durable across ephemeral Render filesystem restarts or redeployments</td>
+              </tr>
+              <tr>
+                <td>Use FastAPI with Pydantic validation</td>
+                <td>Strong input validation and API clarity</td>
+                <td>Still requires careful treatment of redirect security and admin access</td>
+              </tr>
+              <tr>
+                <td>Preserve deactivated records</td>
+                <td>Maintains analytics and avoids breaking historical references</td>
+                <td>Requires reservation and uniqueness enforcement logic</td>
+              </tr>
+              <tr>
+                <td>Admin auth via API key</td>
+                <td>Protects management operations without exposing secrets in UI</td>
+                <td>Requires secure environment configuration and operational care</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="callout">Reasonable alternatives include managed PostgreSQL for production, a more formal auth layer, and a dedicated persistence volume strategy. These are future improvements rather than implemented system changes.</div>
+
+          <h3>Engineering judgment</h3>
+          <p>The repository reflects clear engineering judgment rather than generic or speculative design choices. The system keeps the application simple, modular, and testable while being honest about its current limitations. The code chooses SQLite for a lightweight prototype, restricts custom aliases to a safe pattern, applies validation to URL inputs, and preserves deactivated records to maintain analytics continuity. Those decisions are justified by the application’s current scale and the project’s objective: a working prototype with clear engineering evidence, not a hypothetical production deployment.</p>
+          <p>Where trade-offs remain, they are documented explicitly rather than hidden. The project recognizes the cost of SQLite on Render’s ephemeral filesystem, the need for robust deployment secrets, and the gap between a prototype and a long-term production service. That explicit acknowledgment is an example of engineering judgment, not merely an implementation detail.</p>
+        </section>
+
+        <section id="testing">
+          <h2>10. Testing and Quality Assurance</h2>
+          <p>The repository contains automated Pytest validation for the URL shortener behavior. The actual test suite was executed in the local environment and the result was as follows:</p>
+
+          <pre><code>Command: .venv\Scripts\python -m pytest -q
+Result: 15 passed, 0 failed</code></pre>
+
+          <p>This is the verified evidence for the implementation quality in the repository. Validation was not inferred from code review alone; the automated suite was run and the outcome recorded before the project was treated as complete. The tests cover:</p>
+
+          <p>Verified test coverage includes:</p>
+          <ul>
+            <li>home page rendering</li>
+            <li>short link creation and redirect</li>
+            <li>duplicate alias rejection</li>
+            <li>custom base URL handling</li>
+            <li>analytics retrieval</li>
+            <li>admin list/detail/update/delete flows</li>
+            <li>invalid input handling</li>
+            <li>deactivation and reserved alias behavior</li>
+          </ul>
+
+          <div class="note">This is the verified test result from the repository. No claim is made about additional scans, load tests, or production verification beyond the actual test suite and live deployment checks described elsewhere in this report.</div>
+        </section>
+
+        <section id="security">
+          <h2>11. Security and Risk Assessment</h2>
+          <p>The application includes several practical safeguards:</p>
+          <ul>
+            <li>URL validation prevents unsupported schemes and malformed destinations.</li>
+            <li>Custom aliases are restricted to a safe character set.</li>
+            <li>Admin routes require a configured secret value and an explicit header.</li>
+            <li>Redirects are limited to valid stored URLs and do not allow arbitrary open redirect behavior beyond the stored link target.</li>
+          </ul>
+
+          <p>Relevant risks and considerations include:</p>
+          <ul>
+            <li>redirect security is only as good as the validated input and destination data</li>
+            <li>admin secrets must remain outside source control</li>
+            <li>public traffic should not rely on a filesystem-backed SQLite database in production</li>
+            <li>rate limiting and abuse protection would be appropriate for a public-facing workload</li>
+          </ul>
+
+          <div class="callout">The application has meaningful validation and access controls already in place, but it is still best described as a pragmatic prototype rather than a full production security boundary.</div>
+        </section>
+
+        <section id="deployment">
+          <h2>12. GitHub and Render Deployment</h2>
+
+          <div class="diagram">
+            <div class="diagram-row">
+              <div class="node small">VS Code</div>
+              <div class="arrow">↓</div>
+              <div class="node small">Git version control</div>
+              <div class="arrow">↓</div>
+              <div class="node small">GitHub repository</div>
+              <div class="arrow">↓</div>
+              <div class="node small">Render deployment</div>
+              <div class="arrow">↓</div>
+              <div class="node small accent">Live FastAPI app</div>
+              <div class="arrow">↓</div>
+              <div class="node small">Browser + API clients</div>
+            </div>
+          </div>
+
+          <h3>Verified deployment configuration</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Repository</td>
+                <td><a href="https://github.com/deepaktatapudi54/url-shortener" target="_blank" rel="noreferrer">https://github.com/deepaktatapudi54/url-shortener</a></td>
+              </tr>
+              <tr>
+                <td>Live App</td>
+                <td><a href="https://dpk-ginq.onrender.com" target="_blank" rel="noreferrer">https://dpk-ginq.onrender.com</a></td>
+              </tr>
+              <tr>
+                <td>API Docs</td>
+                <td><a href="https://dpk-ginq.onrender.com/docs" target="_blank" rel="noreferrer">https://dpk-ginq.onrender.com/docs</a></td>
+              </tr>
+              <tr>
+                <td>Hosting platform</td>
+                <td>Render Web Service</td>
+              </tr>
+              <tr>
+                <td>Branch</td>
+                <td>main</td>
+              </tr>
+              <tr>
+                <td>Build command</td>
+                <td>pip install -r requirements.txt</td>
+              </tr>
+              <tr>
+                <td>Start command</td>
+                <td>uvicorn app.main:app --host 0.0.0.0 --port $PORT</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p>Environment variables used by the application include:</p>
+          <ul>
+            <li><strong>PUBLIC_BASE_URL</strong> – used to generate public short links.</li>
+            <li><strong>ADMIN_API_KEY</strong> – protects admin-only endpoints.</li>
+            <li><strong>PORT</strong> – used by the hosting platform to bind the service.</li>
+          </ul>
+          <p>No secret values are included in the repository or in this report. Those values must be configured in the Render environment appropriately.</p>
+
+          <h3>Live verification</h3>
+          <ul>
+            <li>The live homepage was accessed.</li>
+            <li>A short URL was created in the deployed application.</li>
+            <li>The generated short URL was opened and its redirect behavior was verified.</li>
+            <li>The Swagger-style documentation was available at the /docs endpoint.</li>
+          </ul>
+
+          <div class="note">The deployed application runs independently of the developer laptop. Local execution is for development and testing; the Render deployment is the hosted production-style environment for the live service.</div>
+
+          <h3>Operational limitation</h3>
+          <p>The current project uses SQLite. On Render’s free service, the filesystem is ephemeral. Database records are therefore not guaranteed to survive restarts, redeployments, or instance replacement. This means the live deployment is suitable as a demonstration prototype, but not as a durable data store for long-term production use.</p>
+        </section>
+
+        <section id="setup">
+          <h2>13. Installation and Setup</h2>
+          <p>To run the application locally:</p>
+          <pre><code>git clone https://github.com/deepaktatapudi54/url-shortener.git
+cd url-shortener
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload</code></pre>
+
+          <p>Access the app locally:</p>
+          <ul>
+            <li>http://127.0.0.1:8000/</li>
+            <li>http://127.0.0.1:8000/docs</li>
+          </ul>
+
+          <p>Environment variables used by the app should be configured before running in a hosted environment. The local environment can vary, but the repository uses the following runtime configuration patterns:</p>
+          <pre><code>$env:PUBLIC_BASE_URL = "https://example.com"
+$env:ADMIN_API_KEY = "your-admin-key"
+$env:PORT = "8000"</code></pre>
+
+          <p>Testing is performed with Pytest:</p>
+          <pre><code>pytest -q</code></pre>
+        </section>
+
+        <section id="scenarios">
+          <h2>14. Example Engineering Scenarios</h2>
+
+          <h3>Greenfield development</h3>
+          <p><strong>Scenario:</strong> Build a URL shortener from scratch.</p>
+          <p><strong>Requirement interpretation:</strong> create a small, usable service that converts long URLs into short codes and resolves them while storing enough metadata for analytics.</p>
+          <p><strong>AI assistance:</strong> used to scaffold the backend routes, validation patterns, and initial tests.</p>
+          <p><strong>Engineering judgment:</strong> preserve a clear separation between database logic, request validation, and redirect behavior.</p>
+          <p><strong>Validation:</strong> run the repository test suite and check short-link creation and redirect behavior.</p>
+
+          <h3>Brownfield enhancement</h3>
+          <p><strong>Scenario:</strong> add click analytics to an existing link service.</p>
+          <p><strong>Requirement interpretation:</strong> extend the storage model and route behavior without breaking redirect logic or admin flows.</p>
+          <p><strong>AI assistance:</strong> useful for identifying integration points and drafting test cases.</p>
+          <p><strong>Engineering judgment:</strong> keep analytics updates minimal and tied to the redirect path.</p>
+          <p><strong>Validation:</strong> confirm analytics count increases on redirect and remains accessible through the admin endpoints.</p>
+
+          <h3>Ambiguous requirement</h3>
+          <p><strong>Scenario:</strong> improve scalability without a clear production database requirement.</p>
+          <p><strong>Requirement interpretation:</strong> recognize that the immediate implementation is a prototype and note SQLite limitations clearly.</p>
+          <p><strong>AI assistance:</strong> useful for capturing trade-offs and summarizing architecture impacts.</p>
+          <p><strong>Engineering judgment:</strong> identify SQLite as a prototype choice and avoid claiming production durability.</p>
+          <p><strong>Validation:</strong> document the limitation and recommend a managed database for future growth.</p>
+
+          <div class="note">These are illustrative scenarios for the engineering process. They are not claims of actual repository changes beyond the implemented app and verified tests.</div>
+        </section>
+
+        <section id="limitations">
+          <h2>15. Limitations and Future Improvements</h2>
+          <ul>
+            <li>SQLite persistence is not durable on Render’s free service filesystem.</li>
+            <li>Production deployment would benefit from a managed database and persistent storage strategy.</li>
+            <li>Rate limiting and abuse prevention would be appropriate for public traffic.</li>
+            <li>Monitoring, logs, and operational runbooks would improve maintainability.</li>
+            <li>Security controls can be strengthened with a more formal environment and secret management model.</li>
+          </ul>
+        </section>
+
+        <section id="conclusion">
+          <h2>16. Conclusion</h2>
+          <p>The URL Shortener is a successfully implemented FastAPI application with browser-based creation, redirect logic, analytics, and admin management. It follows a clear architecture with a lightweight SQLite persistence layer and is deployable through GitHub and Render. The repository contains working tests, the app has been validated locally, and the live deployment links are available and operational.</p>
+          <p>The design reflects a pragmatic engineering approach that balances simplicity, usability, and clear validation. The most important project limitation is the use of SQLite on a free Render filesystem, which is not durable across restarts or redeployments. This is a valid prototype constraint, but it also clarifies the next step for any future production-grade deployment.</p>
+          <p>Most importantly, the assignment’s central principle is demonstrated clearly: AI assisted with implementation, debugging, documentation, and testing, while the engineer retained ownership of the architecture, validation, and final quality decisions. The result is a documented, test-backed engineering solution rather than a black-box AI-generated artifact.</p>
+        </section>
+      </main>
+
+      <footer class="footer">
+        Document prepared from the repository and verified implementation: URL Shortener application, FastAPI backend, SQLite data layer, Render hosting, and live deployment configuration.
+      </footer>
+    </div>
+  </body>
+</html>
