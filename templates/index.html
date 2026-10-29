@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deepak URL Shortener</title>
+    <meta name="description" content="Deepak URL Shortener helps you turn long links into clean, shareable short links." />
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="hero-card" aria-labelledby="title">
+        <header class="topbar">
+          <div class="brand-mark" aria-label="Deepak logo">D</div>
+          <div class="brand-name-wrap">
+            <span class="brand-name">Deepak</span>
+          </div>
+        </header>
+
+        <div class="hero-grid">
+          <div class="brand-block">
+            <span class="eyebrow">Smart links</span>
+            <h1 id="title">URL Shortener</h1>
+            <p class="subtitle">Shorten links. Share smarter.</p>
+
+            <div class="config-note">
+              {% if custom_domain_warning %}
+                <strong>Domain notice:</strong> <span>{{ public_base_url }}</span> is configured for generated links, but it will only work publicly after DNS and HTTPS are correctly set up for the live deployment. For local testing, the app still supports the localhost URL.
+              {% else %}
+                Use <strong>PUBLIC_BASE_URL</strong> to override the public domain for generated URLs. If unset, local development URLs continue to work.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <form id="shortenerForm" novalidate>
+          <div class="field-group">
+            <label for="originalUrl">Drop Link</label>
+            <input
+              id="originalUrl"
+              name="originalUrl"
+              type="url"
+              placeholder="Paste your long URL here"
+              required
+              autocomplete="off"
+            />
+            <small class="error-message" id="originalUrlError" aria-live="polite"></small>
+          </div>
+
+          <div class="field-group">
+            <label for="customAlias">Short Name</label>
+            <input
+              id="customAlias"
+              name="customAlias"
+              type="text"
+              placeholder="teams, mail, or red"
+              required
+              minlength="3"
+              maxlength="32"
+              autocomplete="off"
+            />
+            <small class="error-message" id="customAliasError" aria-live="polite"></small>
+          </div>
+
+          <div class="field-group">
+            <label for="shortenedUrl">Shortened URL</label>
+            <div class="url-row">
+              <input
+                id="shortenedUrl"
+                name="shortenedUrl"
+                type="text"
+                placeholder="Your short URL will appear here"
+                readonly
+              />
+              <button id="copyButton" type="button" class="secondary-button" disabled>
+                Copy Link
+              </button>
+            </div>
+            <a id="shortenedUrlLink" class="short-url-link" href="#" target="_blank" rel="noreferrer" hidden>
+              short
+            </a>
+          </div>
+
+          <button id="submitButton" type="submit" class="primary-button">
+            <span class="button-text">Create Short Link</span>
+            <span class="spinner" hidden aria-hidden="true"></span>
+          </button>
+
+          <div id="statusMessage" class="status-message" role="alert" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <section class="info-grid" aria-label="How it works and features">
+        <article class="info-card">
+          <h2>How It Works</h2>
+          <ol class="steps-list">
+            <li><span>1</span> Paste your original link.</li>
+            <li><span>2</span> Choose a custom short name.</li>
+            <li><span>3</span> Create and share your new link.</li>
+          </ol>
+        </article>
+
+        <article class="info-card">
+          <h2>Features</h2>
+          <ul class="feature-list">
+            <li>Custom aliases</li>
+            <li>Fast redirects</li>
+            <li>Persistent link storage</li>
+            <li>Click analytics</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', path='app.js') }}"></script>
+  </body>
+</html>
